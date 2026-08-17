@@ -1,0 +1,41 @@
+{
+  "proteins": [
+    "chicken",
+    "beef",
+    "pork",
+    "turkey",
+    "tofu",
+    "tempeh",
+    "shrimp",
+    "salmon",
+    "cod",
+    "tuna",
+    "lamb",
+    "ground turkey",
+    "ground beef",
+    "bacon",
+    "sausage",
+    "seitan",
+    "chickpeas",
+    "black beans"
+  ],
+  "aliases": {
+    "chicken breast": "chicken",
+    "chicken thighs": "chicken",
+    "chicken thighs, boneless": "chicken",
+    "boneless chicken breast": "chicken",
+    "ground chicken": "chicken",
+    "beef steak": "beef",
+    "steak": "beef",
+    "ground beef": "ground beef",
+    "pork chop": "pork",
+    "pork loin": "pork",
+    "pork tenderloin": "pork",
+    "turkey breast": "turkey",
+    "extra-firm tofu": "tofu",
+    "firm tofu": "tofu",
+    "prawns": "shrimp",
+    "salmon fillet": "salmon",
+    "salmon fillets": "salmon"
+  }
+}

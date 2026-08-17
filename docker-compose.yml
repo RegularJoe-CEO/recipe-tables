@@ -1,0 +1,16 @@
+services:
+  recipe-tables:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      # Pass through from host shell or a .env next to this file
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPO: ${GITHUB_REPO:-}
+      GITHUB_BRANCH: ${GITHUB_BRANCH:-main}
+      GITHUB_PATH_PREFIX: ${GITHUB_PATH_PREFIX:-recipes/}
+    volumes:
+      # Persist your local library across restarts
+      - ./data/library:/app/data/library
+      - ./data/exports:/app/data/exports
