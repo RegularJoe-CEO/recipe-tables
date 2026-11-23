@@ -763,21 +763,29 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
                 out.append(c)
         return out
 
-    for pass_long in (True, False):
+    # Multi-word phrases for every ingredient first, then long single words,
+    # then short ones — so "turkey broth" is claimed by the broth before the
+    # lone word "turkey" from a longer ingredient name can steal it.
+    def pass_of(cand: str) -> int:
+        if " " in cand:
+            return 0
+        return 1 if len(cand) >= 6 else 2
+
+    for current_pass in (0, 1, 2):
         ordered = sorted(ingredients, key=lambda i: len(i.name), reverse=True)
         for ing in ordered:
             if ing.id in matched:
                 continue
             for cand in candidates_for(ing):
-                if pass_long and (" " not in cand and len(cand) < 6):
-                    continue
-                if not pass_long and (" " in cand or len(cand) >= 6):
+                if pass_of(cand) != current_pass:
                     continue
                 if cand in adjectives or cand in generic_heads:
                     continue
                 # bare "oil"/"salt"/"pepper" only if this ingredient's head noun
                 if cand in short_ambiguous and " " not in cand:
-                    tokens = re.findall(r"[a-zA-Z]+", ing.name.lower())
+                    # Ignore "(plus more to taste)" when finding the head noun
+                    base = re.sub(r"\([^)]*\)", "", ing.name.lower())
+                    tokens = re.findall(r"[a-zA-Z]+", base)
                     if not tokens or tokens[-1] != cand:
                         continue
                 pattern = r"\b" + re.escape(cand) + r"s?\b"

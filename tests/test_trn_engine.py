@@ -330,3 +330,19 @@ def test_dish_title_without_qty_still_rejected():
 
     ings = _parse_ingredients("Dr Pepper-Glazed Lamb Shoulder\n2 cups flour")
     assert [i.name for i in ings] == ["flour"]
+
+
+def test_phrase_matches_beat_single_words_from_longer_names():
+    from src.trn_converter import _match_ingredients
+    from src.quantity_parser import parse_ingredient_line as p
+
+    giblets = p("Giblets and neck from 1 turkey or whole chicken")
+    broth = p("4 cups chicken or turkey broth (divided)")
+    butter = p("4 tablespoons unsalted butter or turkey drippings")
+    salt = p("1/2 teaspoon salt (plus more to taste)")
+    ings = [giblets, broth, butter, salt]
+    assert _match_ingredients("Add 3 cups of the chicken or turkey broth.", ings) == [broth.id]
+    assert _match_ingredients(
+        "Melt the butter or turkey drippings in a large skillet.", ings
+    ) == [butter.id]
+    assert _match_ingredients("Add the poultry seasoning, salt, and black pepper.", ings) == [salt.id]
