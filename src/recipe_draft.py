@@ -83,7 +83,7 @@ def draft_to_trn(draft: RecipeDraft) -> TRNTable:
         line = re.sub(r"^[\-\*\u2022•\d]+[\.\)]\s*", "", line).strip()
         if not line or is_junk_ingredient_line(line):
             continue
-        if re.match(r"^(?i)(ingredients?|for the|optional)\b", line) and ":" in line:
+        if re.match(r"(?i)^(ingredients?|for the|optional)\b", line) and ":" in line:
             continue
         ing = parse_ingredient_line(line)
         if ing.name and not is_junk_ingredient_line(ing.name):
@@ -99,7 +99,7 @@ def draft_to_trn(draft: RecipeDraft) -> TRNTable:
             continue
         is_header = bool(
             re.match(
-                r"^(?i)(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
+                r"(?i)^(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
                 r"grease|butter and flour|line (?:the )?(?:pan|sheet))\b",
                 text,
             )

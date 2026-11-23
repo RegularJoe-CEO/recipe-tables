@@ -249,7 +249,7 @@ def _milestones_from_steps(body: list[Step], warnings: list[str]) -> list[Milest
         ):
             continue
         if re.match(
-            r"^(?i)(empalmes?|fried pinto|dried piquin|about \d+ minutes|"
+            r"(?i)^(empalmes?|fried pinto|dried piquin|about \d+ minutes|"
             r"do the same with|\[component\])\b",
             step.detail or "",
         ):

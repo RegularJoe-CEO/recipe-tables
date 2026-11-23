@@ -161,7 +161,7 @@ def _normalize_component_headers(text: str) -> str:
             continue
         # Drop pure chrome; salvage qty glued after "MAKES ABOUT ½ A CUP*4corn tortillas"
         if re.match(
-            r"^(?i)(makes?\s+\d|makes?\s+about|to serve:?|course\b|cuisine\b|"
+            r"(?i)^(makes?\s+\d|makes?\s+about|to serve:?|course\b|cuisine\b|"
             r"keyword\b|author\b|prep time|cook time|total time|provecho!?|"
             r"calories\b)",
             s,

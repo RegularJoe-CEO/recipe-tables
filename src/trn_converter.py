@@ -403,7 +403,7 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
         line = scrub_inline(line)
         # Strip any leftover glued "Directions " prefix
         line = re.sub(
-            r"^(?i)(?:ingredients?|directions?|instructions?|method)\s+",
+            r"(?i)^(?:ingredients?|directions?|instructions?|method)\s+",
             "",
             line,
         ).strip()
@@ -411,7 +411,7 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
             continue
         # Instruction sentences are NOT ingredients (even if they mention oil/salt)
         if re.match(
-            r"^(?i)(combine|mix|add|heat|cook|bake|stir|fold|pour|place|remove|"
+            r"(?i)^(combine|mix|add|heat|cook|bake|stir|fold|pour|place|remove|"
             r"transfer|rub|smoke|serve|whisk|season|refrigerate|marinate|"
             r"pat|cover|return|simmer|bring|skim|strain|coat|spoon)\b",
             line,
@@ -504,7 +504,7 @@ def _split_step_lines(block: str) -> list[str]:
         for ln in lines
         if ACTION_START.match(ln)
         or HEADER_ACTIONS.match(ln)
-        or re.match(r"^(?i)(combine|add|mix|fold|grease|roll|cut|arrange|heat|bake|remove|serve|cover|let|place|use)\b", ln)
+        or re.match(r"(?i)^(combine|add|mix|fold|grease|roll|cut|arrange|heat|bake|remove|serve|cover|let|place|use)\b", ln)
     ]
     if len(action_lines) >= 2 and len(action_lines) >= len(lines) * 0.5:
         return finalize(lines)
@@ -537,7 +537,7 @@ def _clean_step_text(s: str) -> str:
         return ""
     # Live-fire / campfire / "as in the book" variations — notes, not TRN columns
     if re.match(
-        r"^(?i)("
+        r"(?i)^("
         r"these (?:biscuits|cookies|can|may)|this (?:recipe )?can be made|"
         r"can be made over|as in the book|before beginning the recipe|"
         r"alternatively|variation:|optional method|note:|tip:|"
@@ -556,7 +556,7 @@ def _clean_step_text(s: str) -> str:
     if re.match(r"(?i)^\[component\]", s):
         return ""
     if re.match(
-        r"^(?i)("
+        r"(?i)^("
         r"empalmes?|fried pinto|dried piquin|provecho|nutrition|"
         r"serving:|calories:|"
         r"about \d+ minutes?\.?$|some people love|go ahead and season|"
@@ -569,7 +569,7 @@ def _clean_step_text(s: str) -> str:
         return ""
     # Pure tips / commentary (not the main action)
     if re.match(
-        r"^(?i)("
+        r"(?i)^("
         r"the biscuits will|don'?t (?:over|under)|dragging will|"
         r"it is important to|this will help|do not overmix|"
         r"when finished,|repeat as needed|note that|"
@@ -578,12 +578,12 @@ def _clean_step_text(s: str) -> str:
         s,
     ):
         # Keep "Once the oil is hot, stir in…" by stripping opener below in short_action
-        if re.match(r"^(?i)once the oil is hot,?\s+\w+", s):
+        if re.match(r"(?i)^once the oil is hot,?\s+\w+", s):
             pass
-        elif re.match(r"^(?i)(about \d+ minutes|some people|do the same)\b", s):
+        elif re.match(r"(?i)^(about \d+ minutes|some people|do the same)\b", s):
             return ""
         elif re.match(
-            r"^(?i)(the biscuits will|don'?t over|dragging will|it is important|"
+            r"(?i)^(the biscuits will|don'?t over|dragging will|it is important|"
             r"this will help|do not overmix|when finished|repeat as needed|note that)\b",
             s,
         ):
@@ -800,7 +800,7 @@ def _parse_steps(block: str, ingredients: list[Ingredient]) -> list[Step]:
         # Never mark a long multi-action blob as prep because "grease" appears mid-text.
         is_header = bool(HEADER_ACTIONS.match(text)) or bool(
             re.match(
-                r"^(?i)(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
+                r"(?i)^(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
                 r"grease|butter and flour|line (?:the )?(?:pan|sheet))\b",
                 text,
             )
@@ -815,7 +815,7 @@ def _parse_steps(block: str, ingredients: list[Ingredient]) -> list[Step]:
         ):
             # "Heat oven to 425" alone → prep; "Heat oven… then bake…" → body
             if not re.match(
-                r"^(?i)(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
+                r"(?i)^(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
                 r"grease|butter and flour|line ).{0,80}$",
                 text,
             ):
