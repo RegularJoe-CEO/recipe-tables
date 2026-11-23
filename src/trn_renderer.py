@@ -365,6 +365,11 @@ def table_to_markdown(table: TRNTable) -> str:
         tag = "*(prep)* " if s.is_header else ""
         lines.append(f"{i}. {tag}{s.detail or s.action}")
     lines.append("")
+    if eng.notes:
+        lines.append("## Notes")
+        lines.append("")
+        lines.append(eng.notes)
+        lines.append("")
     if eng.source:
         lines.append(f"*Source: {eng.source}*")
     lines.append("")

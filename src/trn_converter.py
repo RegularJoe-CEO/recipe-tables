@@ -141,12 +141,14 @@ def convert_text_to_trn(
         if PROTEIN_WORDS.search(ing.name):
             ing.is_protein = True
 
-    steps = _parse_steps(step_block, ingredients)
+    notes: list[str] = []
+    steps = _parse_steps(step_block, ingredients, notes)
 
     # If no structured ingredients were found, invent rows from step mentions
     if not ingredients:
         ingredients = _infer_ingredients_from_steps(step_block)
-        steps = _parse_steps(step_block, ingredients)
+        notes = []
+        steps = _parse_steps(step_block, ingredients, notes)
 
     # Drop junk steps (ads, visit, storage blurbs, reviews)
     steps = [s for s in steps if not _is_junk_step(s) and not is_junk_step(s.detail or s.action)]
@@ -178,6 +180,7 @@ def convert_text_to_trn(
         steps=steps,
         servings=servings or None,
         source=source,
+        notes=" ".join(notes),
     )
     # Record original protein for substitution feature
     proteins = [i.name for i in ingredients if i.is_protein]
@@ -455,7 +458,32 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
     return ingredients
 
 
-def _split_step_lines(block: str) -> list[str]:
+# Storage / serving tips inside the last instruction ("Remember to take them
+# out 20 minutes before serving", "store them in the freezer") are notes, not
+# cooking actions. Left as steps, each sentence became its own TRN column.
+_NOTE_SENTENCE = re.compile(
+    r"(?i)^(?:"
+    r"remember\b|also,?\s+(?:don'?t|do not|be sure)\b|"
+    r"(?:don'?t|do not)\s+stack\b|leftovers?\b|"
+    r"(?:will|can|should)\s+keep\b|keeps?\s+(?:well|for|up to)\b|"
+    r"to store\b|for storage\b|storage\b|make[- ]ahead\b"
+    r")"
+    r"|\bstored?\s+(?:them|it|these|leftovers|in)\b.*\b(?:freezer|fridge|"
+    r"refrigerator|airtight|container|zip\s*-?lock|bag)\b"
+)
+
+# One-word imperatives ("Freeze.") are too short to survive is_junk_step on
+# their own; fold them into the previous step instead of losing them.
+_SHORT_IMPERATIVE = re.compile(
+    r"(?i)^(?:freeze|chill|serve|refrigerate|cool|rest|cover|stir|bake|repeat)[.!]?$"
+)
+
+
+def _is_note_sentence(s: str) -> bool:
+    return bool(_NOTE_SENTENCE.search((s or "").strip()))
+
+
+def _split_step_lines(block: str, notes: Optional[list[str]] = None) -> list[str]:
     """
     Split instruction block into individual step strings.
 
@@ -481,8 +509,15 @@ def _split_step_lines(block: str) -> list[str]:
             subs = _split_sentences(s)
             for sub in subs:
                 cleaned = _clean_step_text(sub)
-                if cleaned:
-                    out.append(cleaned)
+                if not cleaned:
+                    if out and _SHORT_IMPERATIVE.match(sub.strip()):
+                        out[-1] = f"{out[-1]} {sub.strip()}"
+                    continue
+                # Notes only after a real step, so a recipe can't lose step 1
+                if notes is not None and out and _is_note_sentence(cleaned):
+                    notes.append(cleaned)
+                    continue
+                out.append(cleaned)
         return out
 
     # Numbered steps: 1. … 2. … or 1) …
@@ -783,8 +818,10 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
 
 
 
-def _parse_steps(block: str, ingredients: list[Ingredient]) -> list[Step]:
-    raw_steps = _split_step_lines(block)
+def _parse_steps(
+    block: str, ingredients: list[Ingredient], notes: Optional[list[str]] = None
+) -> list[Step]:
+    raw_steps = _split_step_lines(block, notes)
     steps: list[Step] = []
     body_indices: list[int] = []  # indices in `steps` that are body steps
 

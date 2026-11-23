@@ -266,3 +266,42 @@ if __name__ == "__main__":
         print("  ings:", [i.name[:20] for i in eng.ingredients[:6]], "...")
         print("  actions:", [m.action for m in eng.milestones])
         print("  span sizes:", [len(s) for s in eng.spans])
+
+
+FROZEN_FRUIT_SALAD = """
+Frozen Fruit Salad
+Servings: 18
+Ingredients
+- 1 c drained, crushed pineapple
+- 2 medium sized bananas diced
+- 2 1/2 T lemon juice
+- 1/8 t salt
+- 2 1/2 c sour cream
+- 1/2 c chopped maraschino cherries
+- 1/2 c chopped walnuts or pecans (optional)
+Instructions
+1. Mix everything together in a large bowl.
+2. Spoon into 18 paper cups that have been place into muffin pans. Freeze.
+3. Once these are frozen I take them out of the pans and put them into a giant zip lock bag and store them in the freezer. Remember to take them out about 20 minutes before serving, so they aren't hard as rocks! Also don't stack these or they may melt together!
+"""
+
+
+def test_storage_notes_stay_notes_not_columns():
+    from src.trn_engine import action_label
+    from src.trn_renderer import table_to_markdown
+
+    table = convert_text_to_trn(FROZEN_FRUIT_SALAD)
+    labels = [action_label(m).lower() for m in build_trn(table).milestones]
+    assert "remember" not in labels and "melt" not in labels, labels
+    assert labels == ["mix", "spoon"], labels
+    assert "Remember to take them out" in table.notes
+    assert "don't stack" in table.notes
+    assert "zip lock bag" in table.notes
+    details = " ".join(s.detail for s in table.steps)
+    assert "Remember" not in details
+    # Short "Freeze." is kept with its step instead of being dropped
+    assert "Freeze." in details
+    md = table_to_markdown(table)
+    assert "## Notes" in md and "Remember to take them out" in md
+    assert len(table.ingredients) == 7
+    export_pdf(table)
