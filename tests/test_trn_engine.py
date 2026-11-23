@@ -257,6 +257,12 @@ if __name__ == "__main__":
     test_column_cap_on_long_recipe()
     test_lead_verb_not_ingredient_noun()
     test_pdf_fits_and_examples()
+    test_storage_notes_stay_notes_not_columns()
+    test_ingredient_with_count_mid_line_is_kept()
+    test_dish_title_without_qty_still_rejected()
+    test_phrase_matches_beat_single_words_from_longer_names()
+    test_bake_variation_notes_stay_notes_not_columns()
+    test_jsonld_yield_becomes_servings()
     print("ALL TESTS PASSED")
     # Pretty dump
     for name, text in ARCHETYPES.items():
@@ -346,3 +352,86 @@ def test_phrase_matches_beat_single_words_from_longer_names():
         "Melt the butter or turkey drippings in a large skillet.", ings
     ) == [butter.id]
     assert _match_ingredients("Add the poultry seasoning, salt, and black pepper.", ings) == [salt.id]
+
+
+OYSTER_DRESSING = """
+Southern Cornbread and Oyster Dressing (Stuffing)
+Servings: 8 to 10 side servings
+Ingredients
+- 1 cup (2 sticks) butter
+- 1 medium onion, chopped
+- 3 ribs celery, chopped
+- 1 tablespoon chopped green bell pepper
+- 6 cups cooked, crumbled cornbread
+- 6 cups dry, toasted bread, crumbled (toasted white bread, leftover biscuits, or rolls)
+- 1 teaspoon salt
+- 1/2 teaspoon Creole or Cajun seasoning, or to taste, optional
+- 1/4 teaspoon freshly cracked black pepper
+- 1 teaspoon sage or Bell's seasoning, or to taste
+- 1/2 teaspoon poultry seasoning
+- 4 to 6 cups turkey or chicken stock
+- 5 eggs, beaten (or 3 raw, 2 boiled and chopped)
+- 1-quart oysters, liquid reserved
+Instructions
+1. Toast the bread in a toaster or in the oven. Remove and set aside to cool.
+2. Make a pan of cornbread, remove and set aside uncovered to cool completely. You want the breads to be very dry. This can be done in advance.
+3. When ready to bake dressing, preheat oven to 350 degrees F. Butter a 9 x 13-inch pan or spray with non-stick spray.
+4. Melt the butter in a skillet over medium heat. Saute the onion, celery and bell pepper.
+5. Add the salt, Creole or Cajun seasoning, pepper, sage or Bell's seasoning and poultry seasoning. Continue cooking and stirring for 2 minutes. Set aside to cool.
+6. Crumble the cornbread into a large bowl. Add the bread and toss.
+7. Add the sauteed veggies, scraping out all of the butter; stir.
+8. Pour in 2 cups of the broth and toss. Taste and adjust seasoning as needed.
+9. Add the beaten eggs; stir.
+10. Using a pair of kitchen shears, roughly chop the oysters. Add the oysters, with their juices, to the cornbread mixture. This is where you fix the consistency.
+11. If you want a fluffy stuffing, you'll use less stock. If you prefer a wetter stuffing, add additional broth as needed to reach desired consistency, taking care not to get too soupy!
+12. Lightly spoon into the prepared casserole dish, but do not pack in.
+13. Bake at 350 degrees F for 45 minutes. For a moister stuffing, baked covered. For a drier stuffing with a crunchy top, bake uncovered.
+"""
+
+
+def test_bake_variation_notes_stay_notes_not_columns():
+    from src.trn_engine import action_label
+    from src.quantity_parser import parse_ingredient_line
+
+    ing = parse_ingredient_line("6 cups cooked, crumbled cornbread")
+    assert "cornbread" in ing.name.lower()
+    assert ing.name.lower() != "cooked"
+    pineapple = parse_ingredient_line("1 c drained, crushed pineapple")
+    assert "pineapple" in pineapple.name.lower()
+
+    table = convert_text_to_trn(OYSTER_DRESSING)
+    labels = [action_label(m).lower().replace("\n", " ") for m in build_trn(table).milestones]
+    assert sum("bake" in lab for lab in labels) == 1, labels
+    assert any("45" in lab for lab in labels), labels
+    assert "remember" not in labels and "moister" not in " ".join(labels)
+    assert "moister stuffing" in table.notes
+    assert "bake uncovered" in table.notes
+    assert "can be done in advance" in table.notes
+    details = " ".join(s.detail for s in table.steps)
+    assert "baked covered" not in details
+    assert "bake uncovered" not in details
+    names = " ".join(i.name for i in table.ingredients).lower()
+    assert "cornbread" in names
+    assert table.servings and "8" in table.servings and "10" in table.servings
+    # Preheat / butter the pan are prep headers, not a bare bake column
+    assert any(s.is_header and "preheat" in s.detail.lower() for s in table.steps), [
+        (s.is_header, s.detail) for s in table.steps
+    ]
+    assert any(s.is_header and "butter a 9" in s.detail.lower() for s in table.steps)
+    export_pdf(table)
+
+
+def test_jsonld_yield_becomes_servings():
+    from src.recipe_input import _recipe_from_jsonld
+
+    text = _recipe_from_jsonld(
+        {
+            "name": "Test Yield Cake",
+            "yield": "8 to 10 side servings",
+            "recipeIngredient": ["1 cup flour", "2 eggs"],
+            "recipeInstructions": ["Mix the flour and eggs.", "Bake 20 minutes."],
+        }
+    )
+    assert "Servings: 8 to 10 side servings" in text
+    table = convert_text_to_trn(text)
+    assert table.servings and "8" in table.servings and "10" in table.servings

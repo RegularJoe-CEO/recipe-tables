@@ -658,7 +658,7 @@ def _recipe_from_jsonld(c: dict) -> str:
         name = name[0] if name else None
     if name:
         parts.append(str(name).strip())
-    yield_ = c.get("recipeYield")
+    yield_ = c.get("recipeYield") or c.get("yield")
     if yield_:
         if isinstance(yield_, list):
             yield_ = yield_[0]

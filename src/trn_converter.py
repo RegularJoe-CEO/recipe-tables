@@ -44,7 +44,7 @@ STEP_HEADERS = re.compile(
 SERVINGS_RE = re.compile(
     r"(?:^|\n)\s*(?:serves?|servings?|yield|makes?)\s*:?\s*"
     r"((?:approximately\s+|about\s+)?\d+\s*(?:to\s*\d+)?\s*"
-    r"(?:people|servings?|portions?)?"
+    r"(?:side\s+)?(?:people|servings?|portions?)?"
     r"|\d+\s*[-–]\s*\d+"
     r"|[^\n]{1,40})",
     re.I,
@@ -57,7 +57,7 @@ HEADER_ACTIONS = re.compile(
     r"preheat|heat\s+(?:your\s+|the\s+)?oven|heat\s+oven|"
     r"grease|"
     r"butter\s+and\s+flour|"
-    r"butter\s+(?:and\s+flour\s+)?(?:an?\s+)?(?:\d|the\s+)?(?:pan|dish|skillet|baking)|"
+    r"butter\s+(?:and\s+flour\s+)?(?:an?\s+)?(?:the\s+)?(?:[\d\s./x×-]+(?:-?\s*in(?:ch(?:es)?)?\s+)?)?(?:pan|dish|skillet|casserole|baking)|"
     r"flour\s+(?:an?\s+)?(?:\d|the\s+)?(?:pan|dish)|"
     r"line\s+(?:the\s+)?(?:pan|baking|sheet)|"
     r"spray\s+(?:with\s+)?(?:cooking|non[- ]stick)|"
@@ -469,7 +469,10 @@ _NOTE_SENTENCE = re.compile(
     r"remember\b|also,?\s+(?:don'?t|do not|be sure)\b|"
     r"(?:don'?t|do not)\s+stack\b|leftovers?\b|"
     r"(?:will|can|should)\s+keep\b|keeps?\s+(?:well|for|up to)\b|"
-    r"to store\b|for storage\b|storage\b|make[- ]ahead\b"
+    r"to store\b|for storage\b|storage\b|make[- ]ahead\b|"
+    r"this can be done in advance\b|"
+    r"for a (?:more )?(?:moist(?:er)?|drier?|wetter|fluff(?:y|ier)|"
+    r"crisp(?:y|ier)?|crunch(?:y|ier))\b"
     r")"
     r"|\bstored?\s+(?:them|it|these|leftovers|in)\b.*\b(?:freezer|fridge|"
     r"refrigerator|airtight|container|zip\s*-?lock|bag)\b"
@@ -846,26 +849,32 @@ def _parse_steps(
 
         # Prep ONLY if the step *starts* as prep (preheat / grease pan).
         # Never mark a long multi-action blob as prep because "grease" appears mid-text.
-        is_header = bool(HEADER_ACTIONS.match(text)) or bool(
+        # Strip "When ready to bake …, preheat …" so the true prep verb is first.
+        header_text = re.sub(
+            r"(?i)^when ready to \w+(?:\s+\w+){0,4},?\s+",
+            "",
+            text,
+        )
+        is_header = bool(HEADER_ACTIONS.match(header_text)) or bool(
             re.match(
                 r"(?i)^(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
                 r"grease|butter and flour|line (?:the )?(?:pan|sheet))\b",
-                text,
+                header_text,
             )
         )
         # Short pure prep only — long steps that also mix/bake are body steps
         if is_header and (
-            len(text) > 120
+            len(header_text) > 120
             or re.search(
                 r"(?i)\b(combine|mix|add|fold|bake|stir|pour|cook|smoke|rub)\b",
-                text,
+                header_text,
             )
         ):
             # "Heat oven to 425" alone → prep; "Heat oven… then bake…" → body
             if not re.match(
                 r"(?i)^(preheat|heat\s+(?:your\s+|the\s+)?(?:home\s+)?oven|"
                 r"grease|butter and flour|line ).{0,80}$",
-                text,
+                header_text,
             ):
                 is_header = False
 

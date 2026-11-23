@@ -171,15 +171,26 @@ def parse_ingredient_line(line: str) -> Ingredient:
     name = rest
     note = ""
     nm = NOTE_SPLIT.search(name)
-    # Only peel note if it looks like a prep note, not part of the name
+    # Only peel note if it looks like a prep note, not part of the name.
+    # "cooked, crumbled cornbread" / "drained, crushed pineapple" — the
+    # comma separates adjectives, and the left token is not the food.
+    _PREP_ONLY_NAMES = {
+        "cooked", "drained", "diced", "minced", "chopped", "sliced",
+        "softened", "melted", "crumbled", "toasted", "dry", "fresh",
+        "frozen", "beaten", "peeled", "seeded", "grated", "shredded",
+        "crushed", "unsalted", "salted", "ground", "dried", "smoked",
+        "canned", "packed", "sifted", "large", "medium", "small", "whole",
+    }
     if nm:
         candidate = nm.group(1).strip()
         # Heuristic: short prep phrases
         if len(candidate) < 40 and not re.search(
             r"\b(and|or|with)\b", candidate, re.I
         ):
-            name = name[: nm.start()].strip()
-            note = candidate
+            left = name[: nm.start()].strip()
+            if left.lower() not in _PREP_ONLY_NAMES:
+                name = left
+                note = candidate
 
     name = name.strip(" ,")
     if not name:
