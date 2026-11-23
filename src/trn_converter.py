@@ -436,13 +436,16 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
                 line,
             ):
                 continue
-            if not re.search(
+            # A count later in the line ("Giblets and neck from 1 turkey") is an
+            # ingredient, not a dish title
+            has_count = bool(re.search(r"\d", line)) and len(line.split()) <= 12
+            if not has_count and not re.search(
                 r"(?i)\b(salt|pepper|flour|sugar|butter|oil|water|milk|egg|garlic|onion)\b",
                 line,
             ):
                 continue
             # "Dr Pepper..." has pepper but is a title — require short pantry line
-            if len(line.split()) > 6:
+            if not has_count and len(line.split()) > 6:
                 continue
         ing = parse_ingredient_line(line)
         if not ing.name or is_junk_ingredient_line(ing.name) or is_non_ingredient_line(ing.name):

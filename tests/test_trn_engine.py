@@ -305,3 +305,28 @@ def test_storage_notes_stay_notes_not_columns():
     assert "## Notes" in md and "Remember to take them out" in md
     assert len(table.ingredients) == 7
     export_pdf(table)
+
+
+def test_ingredient_with_count_mid_line_is_kept():
+    text = """
+Southern Giblet Gravy
+Servings: 12
+Ingredients
+- Giblets and neck from 1 turkey or whole chicken
+- 4 cups chicken or turkey broth (divided)
+- 1/4 cup all-purpose flour
+Instructions
+1. Place the giblets and neck in a medium saucepan. Add 3 cups of the broth.
+2. Whisk in the flour and simmer until thickened.
+"""
+    table = convert_text_to_trn(text)
+    names = [i.name.lower() for i in table.ingredients]
+    assert any("giblets and neck" in n for n in names), names
+    assert len(table.ingredients) == 3
+
+
+def test_dish_title_without_qty_still_rejected():
+    from src.trn_converter import _parse_ingredients
+
+    ings = _parse_ingredients("Dr Pepper-Glazed Lamb Shoulder\n2 cups flour")
+    assert [i.name for i in ings] == ["flour"]
