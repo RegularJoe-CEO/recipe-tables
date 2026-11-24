@@ -435,3 +435,37 @@ def test_jsonld_yield_becomes_servings():
     assert "Servings: 8 to 10 side servings" in text
     table = convert_text_to_trn(text)
     assert table.servings and "8" in table.servings and "10" in table.servings
+
+
+def test_ranges_display_both_ends_not_midpoint():
+    from src.quantity_parser import parse_ingredient_line as p
+
+    assert p("10-12 eggs").display_left() == "10-12  eggs"
+    assert p("2-3 quarts chicken broth").display_left() == "2-3 quarts  chicken broth"
+    assert p("10-12 eggs").display_left(2.0) == "20-24  eggs"
+    assert p("2 1/2 cup sour cream").display_left() == "2 1/2 cup  sour cream"
+
+
+def test_to_taste_and_optional_lines_kept_and_matched():
+    text = """
+Cornbread Dressing
+Ingredients
+- 8 pkg Martha White Yellow Cornbread Mix
+- 1-2 cups onions, chopped
+- sweet corn (optional)
+- sage to taste
+- salt to taste
+Instructions
+1. Make the cornbread according to the package directions.
+2. Saute the onions and sweet corn (optional) in butter.
+3. Mix in the onion mixture.
+4. Stir in salt and sage to taste.
+"""
+    table = convert_text_to_trn(text)
+    names = [i.name for i in table.ingredients]
+    assert "sweet corn (optional)" in names and "sage to taste" in names, names
+    by_name = {i.id: i.name for i in table.ingredients}
+    mix_step = next(s for s in table.steps if s.detail.startswith("Mix in"))
+    assert mix_step.ingredient_ids == []  # "Mix" is not the cornbread mix
+    season = next(s for s in table.steps if s.detail.startswith("Stir in"))
+    assert sorted(by_name[i] for i in season.ingredient_ids) == ["sage to taste", "salt to taste"]

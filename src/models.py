@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Optional
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -41,6 +42,15 @@ class Quantity:
         q = self.scaled(factor) if factor != 1.0 else self
         if q.amount is None:
             return q.raw or q.unit or ""
+        # Ranges ("10-12", "2-3") keep both ends; amount is only the midpoint
+        rng = _RANGE_RE.match(self.raw or "")
+        if rng:
+            lo, hi = (_simple_number(g) for g in rng.groups())
+            if lo is not None and hi is not None:
+                parts = [f"{_format_amount(lo * factor)}-{_format_amount(hi * factor)}"]
+                if q.unit:
+                    parts.append(q.unit)
+                return " ".join(parts)
         amt = _format_amount(q.amount)
         parts = [amt]
         if q.unit:
@@ -53,6 +63,23 @@ class Quantity:
     @classmethod
     def from_dict(cls, d: dict) -> "Quantity":
         return cls(**{k: d.get(k) for k in ("amount", "unit", "raw", "note")})
+
+
+_RANGE_RE = re.compile(r"^\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*[-–]\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*$")
+
+
+def _simple_number(token: str) -> Optional[float]:
+    token = token.strip()
+    m = re.match(r"^(\d+)\s+(\d+)/(\d+)$", token)
+    if m:
+        return int(m.group(1)) + int(m.group(2)) / int(m.group(3))
+    m = re.match(r"^(\d+)/(\d+)$", token)
+    if m:
+        return int(m.group(1)) / int(m.group(2))
+    try:
+        return float(token)
+    except ValueError:
+        return None
 
 
 def _format_amount(n: float) -> str:

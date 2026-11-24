@@ -438,7 +438,10 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
                 continue
             # A count later in the line ("Giblets and neck from 1 turkey") is an
             # ingredient, not a dish title
-            has_count = bool(re.search(r"\d", line)) and len(line.split()) <= 12
+            has_count = (
+                bool(re.search(r"\d", line))
+                or bool(re.search(r"(?i)\b(to taste|optional)\b", line))
+            ) and len(line.split()) <= 12
             if not has_count and not re.search(
                 r"(?i)\b(salt|pepper|flour|sugar|butter|oil|water|milk|egg|garlic|onion)\b",
                 line,
@@ -727,11 +730,14 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
     generic_heads = {
         "sauce", "extract", "powder", "flakes", "leaves", "cloves", "breast",
         "fillet", "fillets", "thighs", "pieces", "stock", "broth", "cans",
+        "mix",  # "cornbread mix" must not claim "Mix in the onions"
     }
     short_ambiguous = {"pepper", "salt", "oil", "sugar", "butter", "sauce", "stock"}
 
     def candidates_for(ing: Ingredient) -> list[str]:
         name = re.sub(r"\([^)]*\)", "", ing.name.lower()).strip()
+        # Bare "sage to taste" → "sage" (comma forms like "x, or to taste" unchanged)
+        name = re.sub(r"^([a-z][a-z' ]*?)\s+to taste$", r"\1", name)
         name = re.sub(r"\s+", " ", name)
         if not name or len(name) < 2:
             return []
@@ -788,6 +794,7 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
                 if cand in short_ambiguous and " " not in cand:
                     # Ignore "(plus more to taste)" when finding the head noun
                     base = re.sub(r"\([^)]*\)", "", ing.name.lower())
+                    base = re.sub(r"^\s*([a-z][a-z' ]*?)\s+to taste\s*$", r"\1", base)
                     tokens = re.findall(r"[a-zA-Z]+", base)
                     if not tokens or tokens[-1] != cand:
                         continue
