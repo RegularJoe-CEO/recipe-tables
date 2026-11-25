@@ -444,6 +444,9 @@ def test_ranges_display_both_ends_not_midpoint():
     assert p("2-3 quarts chicken broth").display_left() == "2-3 quarts  chicken broth"
     assert p("10-12 eggs").display_left(2.0) == "20-24  eggs"
     assert p("2 1/2 cup sour cream").display_left() == "2 1/2 cup  sour cream"
+    assert p("2 to 4 tbsp milk").display_left() == "2 to 4 tbsp  milk"
+    assert p("4 to 6 cups turkey or chicken stock").display_left() == "4 to 6 cups  turkey or chicken stock"
+    assert p("2 to 4 tbsp milk").display_left(2.0) == "4 to 8 tbsp  milk"
 
 
 def test_to_taste_and_optional_lines_kept_and_matched():
@@ -469,3 +472,29 @@ Instructions
     assert mix_step.ingredient_ids == []  # "Mix" is not the cornbread mix
     season = next(s for s in table.steps if s.detail.startswith("Stir in"))
     assert sorted(by_name[i] for i in season.ingredient_ids) == ["sage to taste", "salt to taste"]
+
+
+
+def test_egg_wash_does_not_steal_eggs_or_milk():
+    from src.trn_converter import _match_ingredients
+    from src.quantity_parser import parse_ingredient_line as p
+
+    eggs = p("2 eggs")
+    cream = p("3/4 cup heavy cream")
+    milk = p("2 to 4 tbsp milk")
+    wash = p("1 egg beaten with a splash of milk, for egg wash")
+    powder = p("2 tsp baking powder")
+    ings = [eggs, cream, milk, wash, powder]
+    names = {i.id: i.name for i in ings}
+
+    def names_for(step):
+        return [names[i] for i in _match_ingredients(step, ings)]
+
+    assert names_for("Beat the eggs with the heavy cream, then stir that into the flour mixture.") == [
+        "eggs",
+        "heavy cream",
+    ]
+    assert names_for("Add milk a tablespoon at a time, just until the dough comes together.") == ["milk"]
+    assert names_for("Brush them with the egg wash before baking.") == [
+        "egg beaten with a splash of milk"
+    ]

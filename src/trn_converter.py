@@ -723,6 +723,9 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
     adjectives = {
         "large", "small", "medium", "fresh", "ground", "dried", "chopped",
         "sliced", "minced", "optional", "cooked", "for", "serving", "purpose",
+        "baking",  # "baking powder" must not claim "before baking"
+        "with", "and", "or", "the", "from", "into", "onto", "a", "an", "of",
+        "to", "in", "on", "at", "by", "as",
         "all", "unsalted", "salted", "white", "black", "red", "green", "whole",
         "boneless", "skinless", "thin", "grated", "crushed", "prepared",
         "four", "ounce", "ounces", "cans", "about", "long", "piece",
@@ -741,6 +744,12 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
         name = re.sub(r"\s+", " ", name)
         if not name or len(name) < 2:
             return []
+        # "1 egg beaten with a splash of milk, for egg wash" must match
+        # "egg wash", not the dough eggs or a lone "milk"/"with".
+        purpose = (ing.quantity.note or "").strip()
+        pm = re.match(r"(?i)^for\s+(.+)$", purpose)
+        if pm and pm.group(1).strip():
+            return [pm.group(1).strip().lower()]
         tokens = re.findall(r"[a-zA-Z][a-zA-Z\-']+", name)
         cands = [name]
         if tokens:

@@ -84,6 +84,7 @@ QTY_RE = re.compile(
             |\d+\s+\d+/\d+            # 1 1/2
             |\d+/\d+                  # 1/2
             |\d+\s*-\s*\d+(?:\.\d+)?  # 2-3
+            |\d+\s+to\s+\d+(?:\.\d+)? # 2 to 4
             |\d+\.\d+                 # 1.5
             |\d+                      # 2
         )
@@ -102,6 +103,15 @@ def _parse_number(token: str) -> Optional[float]:
     if not token:
         return None
     # Range → take midpoint for scaling, keep raw elsewhere
+    if re.search(r"\s+to\s+", token, re.I):
+        parts = re.split(r"\s+to\s+", token, maxsplit=1, flags=re.I)
+        try:
+            a = _parse_number(parts[0])
+            b = _parse_number(parts[1])
+            if a is not None and b is not None:
+                return (a + b) / 2.0
+        except Exception:
+            pass
     if "-" in token and not token.startswith("-"):
         parts = [p.strip() for p in token.split("-", 1)]
         try:

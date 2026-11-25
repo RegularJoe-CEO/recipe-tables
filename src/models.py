@@ -47,7 +47,8 @@ class Quantity:
         if rng:
             lo, hi = (_simple_number(g) for g in rng.groups())
             if lo is not None and hi is not None:
-                parts = [f"{_format_amount(lo * factor)}-{_format_amount(hi * factor)}"]
+                sep = " to " if re.search(r"\bto\b", self.raw or "", re.I) else "-"
+                parts = [f"{_format_amount(lo * factor)}{sep}{_format_amount(hi * factor)}"]
                 if q.unit:
                     parts.append(q.unit)
                 return " ".join(parts)
@@ -65,7 +66,10 @@ class Quantity:
         return cls(**{k: d.get(k) for k in ("amount", "unit", "raw", "note")})
 
 
-_RANGE_RE = re.compile(r"^\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*[-–]\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*$")
+_RANGE_RE = re.compile(
+    r"^\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*(?:[-–]|to)\s*(\d+(?:\s+\d+/\d+|/\d+|\.\d+)?)\s*$",
+    re.I,
+)
 
 
 def _simple_number(token: str) -> Optional[float]:
