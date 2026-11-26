@@ -498,3 +498,44 @@ def test_egg_wash_does_not_steal_eggs_or_milk():
     assert names_for("Brush them with the egg wash before baking.") == [
         "egg beaten with a splash of milk"
     ]
+
+
+
+def test_diced_tomatoes_are_kept():
+    from src.trn_converter import _parse_ingredients
+
+    ings = _parse_ingredients("2/3 cup diced tomatoes\n1 cup diced")
+    names = [i.name for i in ings]
+    assert "diced tomatoes" in names, names
+    assert "diced" not in names
+
+
+def test_mixed_number_to_range_is_kept():
+    from src.quantity_parser import parse_ingredient_line as p
+
+    ing = p("1 1/2 to 2 Tbsp Cajun seasoning (divided, or to taste depending on your brand*)")
+    assert ing.display_left().startswith("1 1/2 to 2 tbsp"), ing.display_left()
+    assert "Cajun seasoning" in ing.name
+    assert "to 2 Tbsp" not in ing.name
+
+
+def test_comma_inside_parentheses_is_not_a_note():
+    from src.quantity_parser import parse_ingredient_line as p
+
+    ing = p("2 Tbsp parsley (finely chopped, to serve)")
+    assert ing.name == "parsley (finely chopped, to serve)", ing.to_dict()
+    assert ing.quantity.note == ""
+
+
+def test_inline_brand_note_does_not_drop_the_rest_of_the_step():
+    from src.text_cleanup import cleanup_recipe_text
+
+    text = (
+        "Add in the heavy whipping cream, add the remaining 1/2 to 1 Tbsp "
+        "Cajun seasoning, to taste (some brands are salty), and parmesan "
+        "cheese, and bring to a simmer. Season to taste if needed."
+    )
+    out = cleanup_recipe_text(text)
+    assert "parmesan cheese" in out
+    assert "bring to a simmer" in out
+    assert "some brands are salty" not in out

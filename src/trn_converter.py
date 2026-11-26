@@ -453,12 +453,14 @@ def _parse_ingredients(block: str) -> list[Ingredient]:
         ing = parse_ingredient_line(line)
         if not ing.name or is_junk_ingredient_line(ing.name) or is_non_ingredient_line(ing.name):
             continue
-        # Reject if name is only a prep adjective
-        if re.match(
-            r"^(diced|minced|chopped|sliced|softened|small|large|medium)\b",
-            ing.name,
-            re.I,
-        ) and len(ing.name.split()) <= 2:
+        # Reject if the name is only prep adjectives ("diced"), not food
+        # ("diced tomatoes").
+        _PREP_ADJ = {
+            "diced", "minced", "chopped", "sliced", "softened", "small",
+            "large", "medium",
+        }
+        name_tokens = re.findall(r"[a-zA-Z]+", ing.name.lower())
+        if name_tokens and all(t in _PREP_ADJ for t in name_tokens):
             continue
         ingredients.append(ing)
     return ingredients
@@ -729,6 +731,8 @@ def _match_ingredients(step_text: str, ingredients: list[Ingredient]) -> list[st
         "all", "unsalted", "salted", "white", "black", "red", "green", "whole",
         "boneless", "skinless", "thin", "grated", "crushed", "prepared",
         "four", "ounce", "ounces", "cans", "about", "long", "piece",
+        "cup", "cups", "tbsp", "tsp", "tablespoon", "tablespoons",
+        "teaspoon", "teaspoons", "lb", "lbs", "oz", "g", "kg", "ml",
     }
     generic_heads = {
         "sauce", "extract", "powder", "flakes", "leaves", "cloves", "breast",

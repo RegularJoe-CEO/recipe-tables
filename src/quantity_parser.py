@@ -73,25 +73,22 @@ UNIT_PATTERN = re.compile(
 )
 
 # Leading quantity: 2, 1/2, 1 1/2, 1½, 1¼ (no space), 2-3, .5
+# A single number, mixed number, or fraction (used alone or in a range)
+_NUM = (
+    r"(?:\d+\s+[½¼¾⅓⅔⅛⅜⅝⅞]|\d+[½¼¾⅓⅔⅛⅜⅝⅞]|[½¼¾⅓⅔⅛⅜⅝⅞]"
+    r"|\d+\s+\d+/\d+|\d+/\d+|\d+\.\d+|\d+)"
+)
+
 QTY_RE = re.compile(
     r"""
     ^\s*
     (?P<qty>
-        (?:
-            \d+\s+[½¼¾⅓⅔⅛⅜⅝⅞]     # 1 ½  (digit + space + glyph)
-            |\d+[½¼¾⅓⅔⅛⅜⅝⅞]         # 1½   (digit glued to glyph)
-            |[½¼¾⅓⅔⅛⅜⅝⅞]            # ½ alone
-            |\d+\s+\d+/\d+            # 1 1/2
-            |\d+/\d+                  # 1/2
-            |\d+\s*-\s*\d+(?:\.\d+)?  # 2-3
-            |\d+\s+to\s+\d+(?:\.\d+)? # 2 to 4
-            |\d+\.\d+                 # 1.5
-            |\d+                      # 2
-        )
+        """ + _NUM + r"""
+        (?:\s*(?:-|to)\s*""" + _NUM + r""")?
     )
     \s*
     """,
-    re.VERBOSE,
+    re.VERBOSE | re.IGNORECASE,
 )
 
 # Parenthetical notes often after the name: butter, softened → note=softened
@@ -193,11 +190,14 @@ def parse_ingredient_line(line: str) -> Ingredient:
     }
     if nm:
         candidate = nm.group(1).strip()
+        left = name[: nm.start()].strip()
+        # Comma inside "(finely chopped, to serve)" is not a trailing note
+        if left.count("(") > left.count(")"):
+            pass
         # Heuristic: short prep phrases
-        if len(candidate) < 40 and not re.search(
+        elif len(candidate) < 40 and not re.search(
             r"\b(and|or|with)\b", candidate, re.I
         ):
-            left = name[: nm.start()].strip()
             if left.lower() not in _PREP_ONLY_NAMES:
                 name = left
                 note = candidate

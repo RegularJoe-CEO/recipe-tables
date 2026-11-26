@@ -363,21 +363,35 @@ def _merge_brand_note_continuations(text: str) -> str:
             continue
         # If line ends mid-paren brand note, skip following until paren closes
         if re.search(r"\(some brands|\(or any|\(such as|\(e\.g\.|\(eg\b", line, re.I):
-            # strip from brand note onward
+            # Strip only the parenthetical, not the rest of the instruction
+            # ("…to taste (some brands are salty), and parmesan cheese…").
             line = re.sub(
-                r"\s*\((?:some brands|or any|such as|e\.g\.|eg\b).*$",
+                r"\s*\((?:some brands|or any|such as|e\.g\.|eg\b)[^)]*\)",
                 "",
                 line,
                 flags=re.I,
             ).strip()
+            unclosed = bool(re.search(
+                r"\((?:some brands|or any|such as|e\.g\.|eg\b)", line, re.I
+            ))
+            if unclosed:
+                # Unclosed brand note at the end of the line — drop it and
+                # skip following continuation lines until the paren closes.
+                line = re.sub(
+                    r"\s*\((?:some brands|or any|such as|e\.g\.|eg\b).*$",
+                    "",
+                    line,
+                    flags=re.I,
+                ).strip()
             i += 1
-            while i < len(lines) and (
-                _is_brand_or_shopping_note(lines[i])
-                or re.match(r"^[A-Za-z].*\)$", lines[i].strip())
-                or "(" not in lines[i]
-                and ")" in lines[i]
-            ):
-                i += 1
+            if unclosed:
+                while i < len(lines) and (
+                    _is_brand_or_shopping_note(lines[i])
+                    or re.match(r"^[A-Za-z].*\)$", lines[i].strip())
+                    or "(" not in lines[i]
+                    and ")" in lines[i]
+                ):
+                    i += 1
             if line:
                 line = re.sub(r"\s*\(\s*$", "", line).strip()
                 out.append(line)
